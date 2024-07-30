@@ -3,25 +3,13 @@ package main
 //go run master/master.go 1234
 
 import (
-	"bytes"
-	"encoding/gob"
+	"context"
 	"fmt"
-	"math/rand"
 	"net"
 	"os"
 	"strings"
-	"time"
+	transmit "udp_connect/handles/pkg"
 )
-
-type Packet struct {
-	PortTo   int
-	Message  string
-	NumFloat float32
-}
-
-func random(min, max int) int {
-	return rand.Intn(max-min) + min
-}
 
 func main() {
 	arguments := os.Args
@@ -46,31 +34,22 @@ func main() {
 
 	defer connection.Close()
 	buffer := make([]byte, 1024)
-	rand.Seed(time.Now().Unix())
-
+	ctx, cancel := context.WithCancel(context.Background())
 	for {
-		n, addr, err := connection.ReadFromUDP(buffer)
+		n, addr, _ := connection.ReadFromUDP(buffer)
 		fmt.Print("-> ", string(buffer[0:n-1]))
 
 		if strings.TrimSpace(string(buffer[0:n])) == "STOP" {
+			cancel()
 			fmt.Println("Exiting UDP server!")
-			return
+			ctx, cancel = context.WithCancel(context.Background())
+			// return
 		}
-		var buf bytes.Buffer
-		encoder := gob.NewEncoder(&buf)
-		packet := &Packet{
-			addr.Port,
-			"here",
-			4.4}
-		err = encoder.Encode(packet)
-		if err != nil {
-			fmt.Println("--error")
-			return
+		if strings.TrimSpace(string(buffer[0:n])) == "START" {
+
+			go transmit.TransmitStructure(ctx, connection, addr)
+
 		}
-		_, err = connection.WriteToUDP(buf.Bytes(), addr)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+
 	}
 }
