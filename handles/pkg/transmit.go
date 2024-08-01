@@ -13,7 +13,7 @@ import (
 func TransmitStructure(ctx context.Context, connection *net.UDPConn, addr *net.UDPAddr) {
 	counter := 1
 	for {
-		timer1 := time.NewTimer(1000 * time.Millisecond)
+		timer1 := time.NewTimer(100 * time.Millisecond)
 		select {
 		case <-timer1.C:
 			var buf bytes.Buffer

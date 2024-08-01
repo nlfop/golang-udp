@@ -60,11 +60,15 @@ func ReceiveStructure(c *net.UDPConn, wg *sync.WaitGroup) {
 
 			c.SetDeadline(time.Now().Add(2 * time.Second))
 			n, _, _ := c.ReadFromUDP(buffer)
-			fileBIN.Write(buffer)
+
 			dec := gob.NewDecoder(bytes.NewReader(buffer[:n]))
 			p := structures.Packet{}
-			dec.Decode(&p)
 
+			dec.Decode(&p)
+			if p.PortTo == 0 {
+				continue
+			}
+			fileBIN.Write(buffer)
 			fileTXT.WriteString(fmt.Sprintf("%d %v\n", p.PortTo, unsafe.Sizeof(p.PortTo)+unsafe.Sizeof(p.Message)+unsafe.Sizeof(p.NumFloat)+4*uintptr(len(p.BigMass))))
 
 		}
