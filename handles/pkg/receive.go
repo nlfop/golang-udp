@@ -1,37 +1,19 @@
 package transmit
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
-	"strings"
-	"sync"
 	"time"
 	"udp_connect/handles/structures"
 	"unsafe"
 )
 
-func ReadSTOP(cancel context.CancelFunc, c *net.UDPConn) {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print(">>> ")
-	text, _ := reader.ReadString('\n')
-	data := []byte(text + "\n")
-	c.Write(data)
-	if strings.TrimSpace(string(data)) == "STOP" {
-		cancel()
-		time.Sleep(2000 * time.Millisecond)
-		fmt.Println("Exiting UDP client!")
+func ReceiveStructure(c *net.UDPConn, ctx context.Context) {
 
-	}
-}
-
-func ReceiveStructure(c *net.UDPConn, wg *sync.WaitGroup) {
-	ctx, cancel := context.WithCancel(context.Background())
-	go ReadSTOP(cancel, c)
 	nameFile := fmt.Sprintf("%v_%v.bin", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
 	fileBIN, err := os.Create(nameFile)
 	if err != nil {
@@ -52,7 +34,7 @@ func ReceiveStructure(c *net.UDPConn, wg *sync.WaitGroup) {
 		select {
 		case <-ctx.Done():
 			fmt.Println("here")
-			wg.Done()
+
 			time.Sleep(200 * time.Millisecond)
 			return
 		default:
