@@ -41,15 +41,15 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context) {
 			buffer := make([]byte, 4096)
 
 			c.SetDeadline(time.Now().Add(2 * time.Second))
-			n, _, _ := c.ReadFromUDP(buffer)
-
+			n, _, err := c.ReadFromUDP(buffer)
+			if err != nil {
+				continue
+			}
 			dec := gob.NewDecoder(bytes.NewReader(buffer[:n]))
 			p := structures.Packet{}
 
 			dec.Decode(&p)
-			if p.PortTo == 0 {
-				continue
-			}
+
 			fileBIN.Write(buffer)
 			fileTXT.WriteString(fmt.Sprintf("%d %v\n", p.PortTo, unsafe.Sizeof(p.PortTo)+unsafe.Sizeof(p.Message)+unsafe.Sizeof(p.NumFloat)+4*uintptr(len(p.BigMass))))
 
