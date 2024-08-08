@@ -88,7 +88,11 @@ func ReceiveStructureOnce(c *net.UDPConn) {
 }
 
 func CountCheckSum(b []byte) []byte {
-	check := 255 - len(b) - 85
+	check := 0
+	for i := 0; i < len(b); i++ {
+		check += int(b[i])
+	}
+	check = check % 256
 	b = append(b, byte(check))
 	return b
 }

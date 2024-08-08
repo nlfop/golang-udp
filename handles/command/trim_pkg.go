@@ -16,19 +16,29 @@ func CommandTrim(commandMass []byte) (string, error) {
 	if n != 8 {
 		return "", fmt.Errorf(ErrorPacket)
 	}
-	if (n + int(commandMass[n-1]) + 85) != 256 {
+	check := 0
+	for i := 0; i < n-1; i++ {
+		check += int(commandMass[i])
+	}
+	check = check % 256
+	if check != int(commandMass[n-1]) {
 		return "", fmt.Errorf(ErrorChecksum)
 	}
-	switch commandMass[3] {
+	switch commandMass[2] {
 	case 16:
-		return StartFlow, nil
-	case 1:
-		return StartOnce, nil
+		switch commandMass[3] {
+		case 16:
+			return StartFlow, nil
+		case 1:
+			return StartOnce, nil
+		default:
+			return "", fmt.Errorf(ErrorCommand)
+
+		}
 	case 32:
 		return StopFlow, nil
 	default:
 		return "", fmt.Errorf(ErrorCommand)
-
 	}
 
 }
