@@ -57,3 +57,38 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context) {
 
 	}
 }
+
+func ReceiveStructureOnce(c *net.UDPConn) {
+	nameFile := fmt.Sprintf("%v_%v.bin", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
+	fileBIN, err := os.Create(nameFile)
+	if err != nil {
+		fmt.Println("Unable to create file:", err)
+		os.Exit(1)
+	}
+	defer fileBIN.Close()
+	nameFileTXT := fmt.Sprintf("%v_%v.txt", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
+	fileTXT, err := os.Create(nameFileTXT)
+	if err != nil {
+		fmt.Println("Unable to create file:", err)
+		os.Exit(1)
+	}
+
+	defer fileTXT.Close()
+	buffer := make([]byte, 4096)
+
+	n, _, _ := c.ReadFromUDP(buffer)
+
+	dec := gob.NewDecoder(bytes.NewReader(buffer[:n]))
+	p := structures.Packet{}
+
+	dec.Decode(&p)
+	fileBIN.Write(buffer)
+	fileTXT.WriteString(fmt.Sprintf("%d %v\n", p.PortTo, unsafe.Sizeof(p.PortTo)+unsafe.Sizeof(p.Message)+unsafe.Sizeof(p.NumFloat)+4*uintptr(len(p.BigMass))))
+
+}
+
+func CountCheckSum(b []byte) []byte {
+	check := 255 - len(b) - 85
+	b = append(b, byte(check))
+	return b
+}

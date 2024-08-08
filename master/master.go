@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
+	"udp_connect/handles/command"
 	transmit "udp_connect/handles/pkg"
 )
 
@@ -37,19 +37,25 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	for {
 		n, addr, _ := connection.ReadFromUDP(buffer)
-		fmt.Print("-> ", string(buffer[0:n-1]))
-
-		if strings.TrimSpace(string(buffer[0:n])) == "STOP" {
+		fmt.Print("-> ", (buffer[0:n]), "\n")
+		comm, err := command.CommandTrim(buffer[0:n])
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		switch comm {
+		case "STOP_FLOW":
 			cancel()
 			fmt.Println("Exiting UDP server!")
 			ctx, cancel = context.WithCancel(context.Background())
-			// return
-		}
-		if strings.TrimSpace(string(buffer[0:n])) == "START" {
-
+		case "START_FLOW":
 			go transmit.TransmitStructure(ctx, connection, addr)
+		case "START_ONCE":
+			go transmit.TransmitStructureOnce(connection, addr)
 
 		}
 
 	}
 }
+
+// strings.TrimSpace(string(buffer[0:n]))== "STOP"

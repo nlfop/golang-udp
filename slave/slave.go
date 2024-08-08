@@ -5,11 +5,12 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"time"
+	"udp_connect/handles/command"
 	transmit "udp_connect/handles/pkg"
 )
 
@@ -30,27 +31,39 @@ func main() {
 	}
 
 	fmt.Printf("The UDP server is %s\n", c.RemoteAddr().String())
+	fmt.Println("Enter 7 bytes without spaces and checksum (it counts automatically)")
 	defer c.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print(">> ")
-		text, _ := reader.ReadString('\n')
-		data := []byte(text + "\n")
-		_, err = c.Write(data)
-		if strings.TrimSpace(string(data)) == "STOP" {
+		data, _ := reader.ReadString('\n')
+		n := len(data)
+
+		str, _ := hex.DecodeString(data[0 : n-1])
+		str = transmit.CountCheckSum(str)
+		_, err = c.Write(str)
+		if err != nil {
+			fmt.Println("--error")
+			return
+		}
+		fmt.Println(str)
+		comm, err := command.CommandTrim(str)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		switch comm {
+		case "STOP_FLOW":
 			cancel()
 			time.Sleep(2000 * time.Millisecond)
 			fmt.Println("Exiting UDP client!")
 			return
-
-		}
-
-		if strings.TrimSpace(string(data)) == "START" {
-
+		case "START_FLOW":
 			go transmit.ReceiveStructure(c, ctx)
-
+		case "START_ONCE":
+			go transmit.ReceiveStructureOnce(c)
 		}
 
 	}

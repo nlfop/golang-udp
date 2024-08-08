@@ -19,18 +19,20 @@ func TransmitStructure(ctx context.Context, connection *net.UDPConn, addr *net.U
 			var buf bytes.Buffer
 			encoder := gob.NewEncoder(&buf)
 			packet := &structures.Packet{
-				counter,
-				"here",
-				4.4,
-				make([]int32, 256)}
+				PortTo:   counter,
+				Message:  "here",
+				NumFloat: 4.4,
+				BigMass:  make([]int32, 256)}
 			counter += 1
 			err := encoder.Encode(packet)
 			if err != nil {
+				timer1.Stop()
 				fmt.Println("--error")
 				return
 			}
 			_, err = connection.WriteToUDP(buf.Bytes(), addr)
 			if err != nil {
+				timer1.Stop()
 				fmt.Println(err)
 				return
 			}
@@ -42,4 +44,28 @@ func TransmitStructure(ctx context.Context, connection *net.UDPConn, addr *net.U
 		}
 
 	}
+}
+
+func TransmitStructureOnce(connection *net.UDPConn, addr *net.UDPAddr) {
+	counter := 1
+
+	var buf bytes.Buffer
+	encoder := gob.NewEncoder(&buf)
+	packet := &structures.Packet{
+		PortTo:   counter,
+		Message:  "here",
+		NumFloat: 4.4,
+		BigMass:  make([]int32, 256)}
+	counter += 1
+	err := encoder.Encode(packet)
+	if err != nil {
+		fmt.Println("--error")
+		return
+	}
+	_, err = connection.WriteToUDP(buf.Bytes(), addr)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 }
