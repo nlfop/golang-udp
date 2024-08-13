@@ -6,34 +6,29 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
-	"net/http"
 	"time"
 
-	"golang.org/x/net/websocket"
-)
-
-var (
-	port = flag.Int("port", 4050, "The server port")
+	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/fiber/v2"
 )
 
 // websocketTimeConnection handles a single websocket time connection - ws.
 func websocketTimeConnection(ws *websocket.Conn) {
 	for range time.Tick(1 * time.Second) {
-		// Once a second, send a message (as a string) with the current time.
-		websocket.Message.Send(ws, time.Now().Format(time.StampMilli))
+
+		ws.WriteMessage(websocket.TextMessage, []byte(time.Now().Format(time.Stamp)))
+
 	}
 }
 
 func main() {
+	app := fiber.New()
+
+	app.Get("/wstime", websocket.New(websocketTimeConnection))
+
+	app.Static("/", "server/static/html/index.html")
+	addr := flag.String("addr", ":8080", "http service address")
 	flag.Parse()
-	// Set up websocket servers and static file server. In addition, we're using
-	// net/trace for debugging - it will be available at /debug/requests.
+	app.Listen(*addr)
 
-	http.Handle("/wstime", websocket.Handler(websocketTimeConnection))
-	http.Handle("/", http.FileServer(http.Dir("server/static/html")))
-
-	log.Printf("Server listening on port %d", *port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
 }
