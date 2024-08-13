@@ -1,98 +1,59 @@
 <!DOCTYPE html>
+
+<!--
+Client-side part of the Go websocket sample.
+
+Simple HTML page with some JS that records mouse movement events and sends them
+into a websocket. On receiving messages from this websocket, reports them as
+text in a <p> beneath the box.
+
+Eli Bendersky [http://eli.thegreenplace.net]
+This code is in the public domain.
+-->
 <html>
-
 <head>
-  <title>Chat App</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f7f7f7;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #fff;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-
-    .input-group {
-      display: flex;
-      margin-bottom: 20px;
-    }
-
-    #input {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 16px;
-    }
-
-    #send-button {
-      padding: 10px 20px;
-      background-color: #4caf50;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    ul {
-      list-style-type: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    li {
-      background-color: #fff;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 4px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-  </style>
+<style>
+  div#box {
+  width: 200px;
+  height: 100px;
+    border: 1px solid black;
+  }
+  div#box:hover {
+    background-color: #EEFEEE;
+  }
+</style>
 </head>
 
 <body>
-  <div class="container">
-    <h1>Chat App</h1>
-    <div class="input-group">
-      <input id="input" type="text" placeholder="Type your message here">
-      <button id="send-button" onclick="sendMessage()">Send</button>
-    </div>
-    <ul id="messages"></ul>
-  </div>
+<p id="timeticker">Waiting for time...</p>
 
-  <script>
-    const messages = document.getElementById('messages');
-    const input = document.getElementById('input');
-    
-    // Establish a WebSocket connection to the server
-    const ws = new WebSocket('ws://localhost:8000/ws');
 
-    // Receive incoming messages and add them to the chat window
-    ws.onmessage = (event) => {
-      const li = document.createElement('li');
-      li.innerText = event.data;
-      messages.appendChild(li);
-    };
+<script type="text/javascript">
 
-    // Send user messages to the server
-    const sendMessage = ()=> {
-      ws.send(input.value);
-      input.value = '';
+  var sockTime = null;
+
+  // Websocket server address.
+  var wsServerAddress = "ws://127.0.0.1:4050";
+
+  window.onload = function() {
+   
+    sockTime = new WebSocket(wsServerAddress + "/wstime");
+    sockTime.onmessage = function(e) {
+      document.getElementById("timeticker").innerHTML = e.data;
     }
-  </script>
-</body>
+  };
 
+  // Send the msg object, encoded with JSON, on the websocket if it's open.
+  function socketSend(msg) {
+    if (sockEcho != null && sockEcho.readyState == WebSocket.OPEN) {
+      sockEcho.send(JSON.stringify(msg));
+    } else {
+      console.log("Socket isn't OPEN");
+    }
+  }
+
+
+</script>
+
+</body>
 </html>
