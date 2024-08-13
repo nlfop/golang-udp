@@ -49,11 +49,55 @@ This code is in the public domain.
 .table_dark tr:hover td {
   text-decoration: underline;
 }
+
+.command_input label{
+  color: #CAD4D6;
+}
+.command_input input{
+  background: #252F48;
+  border: 2px solid #EDB749;
+  border-radius: 15px; 
+  color: #CAD4D6;
+  font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+  font-size: 14px;
+}
+
+.command_input button{
+  background: #EDB749;
+  border: 2px solid #EDB749;
+  border-radius: 15px; 
+  color: #000000;
+  font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+  font-size: 14px;
+}
+
+.command_input button:hover{
+  background: #CAD4D6;
+  border: 2px solid #CAD4D6;
+  border-radius: 15px; 
+  color: #000000;
+  font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+  font-size: 14px;
+}
+
+
 </style>
 </head>
 
 <body>
 <p id="timeticker">Waiting for time...</p>
+<div>
+  <form class="command_input">
+    <label for="input-field">
+      Введите команду:
+    </label>
+    <input id="input-field" type="text">
+    <button >Отправить</button>
+  </form>
+ 
+
+  
+</div>
 <table class="table_dark">
   <tr>
     <th>Name</th>
@@ -95,6 +139,8 @@ This code is in the public domain.
     sockTime.onmessage = function(e) {
       document.getElementById("timeticker").innerHTML = e.data;
     }
+
+
   };
 
   // Send the msg object, encoded with JSON, on the websocket if it's open.
@@ -105,6 +151,31 @@ This code is in the public domain.
       console.log("Socket isn't OPEN");
     }
   }
+  document.querySelector('form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    var commandForm = document.getElementById("input-field").value;
+    console.log(commandForm)
+
+    let xhr = new XMLHttpRequest();
+    // адрес, куда мы отправим нашу JSON-строку
+    let url = "/command";
+    // открываем соединение
+    xhr.open("POST", url, true);
+    // устанавливаем заголовок — выбираем тип контента, который отправится на сервер, в нашем случае мы явно пишем, что это JSON
+    xhr.setRequestHeader("Content-Type", "application/json");
+    // когда придёт ответ на наше обращение к серверу, мы его обработаем здесь
+    xhr.onreadystatechange = function () {
+      // если запрос принят и сервер ответил, что всё в порядке
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        // выводим то, что ответил нам сервер — так мы убедимся, что данные он получил правильно
+        result.innerHTML = this.responseText;
+      }
+    };
+    // преобразуем наши данные JSON в строку
+    var data = JSON.stringify({ "command": commandForm});
+    // когда всё готово, отправляем JSON на сервер
+    xhr.send(data);
+  });
 
 
 </script>

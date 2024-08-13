@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"flag"
 	"time"
+	"udp_connect/server/slave"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -63,6 +64,7 @@ func main() {
 	app.Get("/wstime", websocket.New(websocketTimeConnection))
 	app.Get("/wsstruct", websocket.New(websocketStructureSend))
 	app.Static("/", "server/static/html/index.html")
+	app.Post("/command", slave.ReceiveCommandFront)
 	addr := flag.String("addr", ":8080", "http service address")
 	flag.Parse()
 	app.Listen(*addr)
