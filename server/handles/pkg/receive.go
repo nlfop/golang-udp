@@ -8,8 +8,10 @@ import (
 	"net"
 	"os"
 	"time"
-	"udp_connect/handles/structures"
+	"udp_connect/server/handles/structures"
 	"unsafe"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func ReceiveStructure(c *net.UDPConn, ctx context.Context) {
@@ -58,7 +60,7 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context) {
 	}
 }
 
-func ReceiveStructureOnce(c *net.UDPConn) {
+func ReceiveStructureOnce(connectionhttp *fiber.Ctx, c *net.UDPConn) {
 	nameFile := fmt.Sprintf("%v_%v.bin", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
 	fileBIN, err := os.Create(nameFile)
 	if err != nil {
@@ -77,13 +79,18 @@ func ReceiveStructureOnce(c *net.UDPConn) {
 	buffer := make([]byte, 4096)
 
 	n, _, _ := c.ReadFromUDP(buffer)
-
+	fmt.Println(n)
 	dec := gob.NewDecoder(bytes.NewReader(buffer[:n]))
 	p := structures.Packet{}
 
-	dec.Decode(&p)
+	err = dec.Decode(&p)
+	if err != nil {
+		fmt.Println("Decode", err)
+	}
 	fileBIN.Write(buffer)
 	fileTXT.WriteString(fmt.Sprintf("%d %v\n", p.PortTo, unsafe.Sizeof(p.PortTo)+unsafe.Sizeof(p.Message)+unsafe.Sizeof(p.NumFloat)+4*uintptr(len(p.BigMass))))
+
+	connectionhttp.Status(200).JSON(p)
 
 }
 

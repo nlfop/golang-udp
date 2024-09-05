@@ -106,12 +106,19 @@ This code is in the public domain.
     </tr>
   <tr>
     <td>Num</td>
-    <td id="num_json">20</td>
+    <td id="num_json">0</td>
 
     </tr>
   <tr>
     <td>Message</td>
-    <td id="message_json">50.2</td>
+    <td id="message_json">hello</td>
+    </tr>
+    <tr>
+  <td>Float</td>
+    <td id="float_json">0.0</td>
+    </tr>
+  <td>Buff</td>
+    <td id="mass_json">[...]</td>
     </tr>
 
   </table>
@@ -125,15 +132,15 @@ This code is in the public domain.
   var wsServerAddress = "ws://127.0.0.1:8080";
 
   window.onload = function() {
-    sockStruct = new WebSocket(wsServerAddress + "/wsstruct");
+    // sockStruct = new WebSocket(wsServerAddress + "/wsstruct");
 
-    sockStruct.onmessage = function(e) {
-      var msg = JSON.parse(e.data);
-      var numJSON= msg.num;
-      var messageJSON = msg.message;
-      document.getElementById("num_json").innerHTML = numJSON;
-      document.getElementById("message_json").innerHTML = messageJSON;
-    }
+    // sockStruct.onmessage = function(e) {
+    //   var msg = JSON.parse(e.data);
+    //   var numJSON= msg.num;
+    //   var messageJSON = msg.message;
+    //   document.getElementById("num_json").innerHTML = numJSON;
+    //   document.getElementById("message_json").innerHTML = messageJSON;
+    // }
 
     sockTime = new WebSocket(wsServerAddress + "/wstime");
     sockTime.onmessage = function(e) {
@@ -168,13 +175,36 @@ This code is in the public domain.
       // если запрос принят и сервер ответил, что всё в порядке
       if (xhr.readyState === 4 && xhr.status === 200) {
         // выводим то, что ответил нам сервер — так мы убедимся, что данные он получил правильно
-        result.innerHTML = this.responseText;
+        var msg = JSON.parse(this.response);
+        var numJSON= msg.num;
+        var messageJSON = msg.message;
+        var floatJSON = msg.numFloat;
+        var massJSON = msg.bigMass;
+        document.getElementById("num_json").innerHTML = numJSON;
+        document.getElementById("message_json").innerHTML = messageJSON;
+        document.getElementById("float_json").innerHTML = floatJSON;
+        document.getElementById("mass_json").innerHTML = massJSON;
       }
     };
     // преобразуем наши данные JSON в строку
     var data = JSON.stringify({ "command": commandForm});
     // когда всё готово, отправляем JSON на сервер
     xhr.send(data);
+    if (commandForm.indexOf("0101") === 3){
+      sockStruct = new WebSocket(wsServerAddress + "/flowSlave");
+
+      sockStruct.onmessage = function(e) {
+        var msg = JSON.parse(e.data);
+        var numJSON= msg.num;
+        var messageJSON = msg.message;
+        var floatJSON = msg.numFloat;
+        var massJSON = msg.bigMass;
+        document.getElementById("num_json").innerHTML = numJSON;
+        document.getElementById("message_json").innerHTML = messageJSON;
+        document.getElementById("float_json").innerHTML = floatJSON;
+        document.getElementById("mass_json").innerHTML = massJSON;
+}
+    } 
   });
 
 

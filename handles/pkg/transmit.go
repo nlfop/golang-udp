@@ -57,6 +57,7 @@ func TransmitStructureOnce(connection *net.UDPConn, addr *net.UDPAddr) {
 		NumFloat: 4.4,
 		BigMass:  make([]int32, 256)}
 	counter += 1
+
 	err := encoder.Encode(packet)
 	if err != nil {
 		fmt.Println("--error")

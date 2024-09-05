@@ -82,6 +82,7 @@ func ReceiveStructureOnce(c *net.UDPConn) {
 	p := structures.Packet{}
 
 	dec.Decode(&p)
+	fmt.Println(p)
 	fileBIN.Write(buffer)
 	fileTXT.WriteString(fmt.Sprintf("%d %v\n", p.PortTo, unsafe.Sizeof(p.PortTo)+unsafe.Sizeof(p.Message)+unsafe.Sizeof(p.NumFloat)+4*uintptr(len(p.BigMass))))
 
