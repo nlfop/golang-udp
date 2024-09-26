@@ -5,13 +5,11 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/gob"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"time"
 	"udp_connect/command_rt/handles/structures"
-	"unsafe"
 )
 
 type ReciveStructure struct {
@@ -63,8 +61,9 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 			answers = append(answers, *answer)
 
 			answers = answers[1:]
-			dataAns, _ := json.Marshal(answers)
-			fileTXT.WriteString(string(dataAns))
+			// dataAns, _ := json.Marshal(answers)
+			// fileTXT.WriteString(string(dataAns))
+
 			time.Sleep(200 * time.Millisecond)
 
 			return
@@ -78,7 +77,7 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 				continue
 			}
 
-			EncodingPackage(buffer[:n])
+			EncodingPackage(buffer[:n], fileTXT)
 			fileBIN.Write(buffer[:n])
 
 		}
@@ -112,7 +111,6 @@ func ReceiveStructureOnce(c *net.UDPConn) {
 	dec.Decode(&p)
 	fmt.Println(p)
 	fileBIN.Write(buffer)
-	fileTXT.WriteString(fmt.Sprintf("%d %v\n", p.PortTo, unsafe.Sizeof(p.PortTo)+unsafe.Sizeof(p.Message)+unsafe.Sizeof(p.NumFloat)+4*uintptr(len(p.BigMass))))
 
 }
 
@@ -130,14 +128,16 @@ var answers []ReciveStructure
 var answer = &ReciveStructure{}
 var block = &ReceiveStructureBlock{}
 
-func EncodingPackage(d []byte) {
+func EncodingPackage(d []byte, fileTXT *os.File) {
 	switch {
 	case len(d) != 8:
 		block.DataBlock = fmt.Sprintf("%x", d)
 		answer.Data = append(answer.Data, *block)
-
+		fileTXT.WriteString(fmt.Sprintf("		Данные : %x\n", d))
 	case d[0] == 83:
-		answers = append(answers, *answer)
+		if answer.Prefix == 83 {
+			answers = append(answers, *answer)
+		}
 
 		sl := []byte{d[2], d[1]}
 		dataSize := binary.BigEndian.Uint16(sl)
@@ -150,7 +150,7 @@ func EncodingPackage(d []byte) {
 			Info2:       d[6],
 			ControlSumm: d[7],
 		}
-
+		fileTXT.WriteString(fmt.Sprintf("Новый пакет, размер %d\n", answer.Size))
 	default:
 		block = &ReceiveStructureBlock{
 			Size:                d[0],
@@ -162,7 +162,7 @@ func EncodingPackage(d []byte) {
 			ControlSummSructure: d[6],
 			ControlSumm:         d[7],
 		}
-
+		fileTXT.WriteString(fmt.Sprintf("	Данные блока: %d, размер структуры %d\n", block.NumberPlace, block.Size))
 		if d[0] == 0 {
 			answer.Data = append(answer.Data, *block)
 
@@ -171,3 +171,16 @@ func EncodingPackage(d []byte) {
 	}
 
 }
+
+// func lastPacket(fileTXT *os.File) {
+// 	if answer.Prefix != 83 {
+// 		return
+// 	}
+// 	fileTXT.WriteString(fmt.Sprintf("Новый пакет, размер %d\n", answer.Size))
+// 	for _, val := range answer.Data {
+// 		fileTXT.WriteString(fmt.Sprintf("	Данные блока: %d, размер структуры %d\n", block.NumberPlace, block.Size))
+// 		if val.DataBlock != "" {
+// 			fileTXT.WriteString(fmt.Sprintf("		Данные : %x\n", val.DataBlock))
+// 		}
+// 	}
+// }
