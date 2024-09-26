@@ -1,6 +1,10 @@
 package main
 
-//go run slave/slave.go 127.0.0.1:1234 127.0.0.1:1235
+//go run slave/slave.go 127.0.0.1:1234 127.0.0.1:1235 127.0.0.1:8000 127.0.0.1:8001
+
+// 68001010000000 - старт периодической передачи
+// 68002001000000 - стоп периодической передачи
+// 68001001000000 - старт однократной передачи
 
 import (
 	"bufio"
@@ -22,6 +26,8 @@ func main() {
 	}
 	CONNECTData := arguments[1]
 	CONNECTComm := arguments[2]
+	addrData := arguments[3]
+	addrComm := arguments[4]
 
 	sData, err := net.ResolveUDPAddr("udp4", CONNECTData)
 	if err != nil {
@@ -34,14 +40,25 @@ func main() {
 		return
 	}
 
-	cData, err := net.DialUDP("udp4", nil, sData)
+	sAddrData, err := net.ResolveUDPAddr("udp4", addrData)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	sAddrComm, err := net.ResolveUDPAddr("udp4", addrComm)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	cData, err := net.DialUDP("udp4", sAddrData, sData)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	defer cData.Close()
 
-	cComm, err := net.DialUDP("udp4", nil, sComm)
+	cComm, err := net.DialUDP("udp4", sAddrComm, sComm)
 
 	if err != nil {
 		fmt.Println(err)
@@ -52,8 +69,9 @@ func main() {
 	fmt.Println("Enter 7 bytes without spaces and checksum (it counts automatically)")
 	defer cData.Close()
 	defer cComm.Close()
+	var ctx context.Context
+	var cancel context.CancelFunc
 
-	ctx, cancel := context.WithCancel(context.Background())
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print(">> ")
@@ -67,7 +85,7 @@ func main() {
 			fmt.Println("--error")
 			return
 		}
-		fmt.Println(str)
+
 		comm, err := command.CommandTrim(str)
 		if err != nil {
 			fmt.Println(err)
@@ -75,12 +93,13 @@ func main() {
 		}
 		switch comm {
 		case "STOP_FLOW":
-			cancel()
+
 			time.Sleep(2000 * time.Millisecond)
 			fmt.Println("Exiting UDP client flow data!")
-			// return
+
 		case "START_FLOW":
-			go transmit.ReceiveStructure(cData, ctx)
+			ctx, cancel = context.WithCancel(context.Background())
+			go transmit.ReceiveStructure(cData, ctx, cancel)
 		case "START_ONCE":
 			go transmit.ReceiveStructureOnce(cData)
 		}

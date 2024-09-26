@@ -19,7 +19,7 @@ func main() {
 	}
 	PORTData := ":" + arguments[1]
 	PORTComm := ":" + arguments[2]
-
+	fmt.Printf("%s - DataPort, %s - CommandsPort\n", PORTData, PORTComm)
 	sData, err := net.ResolveUDPAddr("udp4", PORTData)
 
 	if err != nil {
@@ -51,9 +51,14 @@ func main() {
 
 	buffer := make([]byte, 1024)
 	ctx, cancel := context.WithCancel(context.Background())
+	sAddrData, err := net.ResolveUDPAddr("udp4", "127.0.0.1:8000")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	for {
-		n, addr, _ := connectionComm.ReadFromUDP(buffer)
-		fmt.Print("-> ", (buffer[0:n]), "\n")
+		n, _, _ := connectionComm.ReadFromUDP(buffer)
+
 		comm, err := command.CommandTrim(buffer[0:n])
 		if err != nil {
 			fmt.Println(err)
@@ -65,13 +70,11 @@ func main() {
 			fmt.Println("Exiting UDP server!")
 			ctx, cancel = context.WithCancel(context.Background())
 		case "START_FLOW":
-			go transmit.TransmitStructure(ctx, connectionData, addr)
+			go transmit.TransmitStructure(ctx, cancel, connectionData, sAddrData)
 		case "START_ONCE":
-			go transmit.TransmitStructureOnce(connectionData, addr)
+			go transmit.TransmitStructureOnce(connectionData, sAddrData)
 
 		}
 
 	}
 }
-
-// strings.TrimSpace(string(buffer[0:n]))== "STOP"
