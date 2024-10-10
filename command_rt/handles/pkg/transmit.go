@@ -28,10 +28,12 @@ func TransmitStructure(ctx context.Context, cancel context.CancelFunc, connectio
 			data := make([]byte, numBytes)
 			n, err := file.Read(data)
 			if err != nil || n == 0 { // если конец файла
-				fmt.Println(err)
-				timer1.Stop()
-				cancel()
-				return
+				// fmt.Println(err)
+				// timer1.Stop()
+				// cancel()
+				file.Seek(0, 0)
+				continue
+				// return
 			}
 
 			numBytes = CountPackage(data)

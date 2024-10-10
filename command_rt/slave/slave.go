@@ -2,9 +2,11 @@ package main
 
 //go run slave/slave.go 127.0.0.1:1234 127.0.0.1:1235 127.0.0.1:8000 127.0.0.1:8001
 
-// 68001010000000 - старт периодической передачи
-// 68002001000000 - стоп периодической передачи
-// 68001001000000 - старт однократной передачи
+// 68 00 10 10 00 00 00 - старт периодической передачи
+// 68 00 20 01 00 00 00 - стоп периодической передачи
+
+// 68000701000000 кс старт
+// 68000702000000 кс стоп
 
 import (
 	"bufio"
@@ -100,8 +102,8 @@ func main() {
 		case "START_FLOW":
 			ctx, cancel = context.WithCancel(context.Background())
 			go transmit.ReceiveStructure(cData, ctx, cancel)
-		case "START_ONCE":
-			go transmit.ReceiveStructureOnce(cData)
+			// case "START_ONCE":
+			// 	go transmit.ReceiveStructureOnce(cData)
 		}
 
 	}

@@ -69,6 +69,7 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 			return
 		default:
 
+			// c.SetDeadline(time.Now().Add(2 * time.Second))
 			c.SetDeadline(time.Now().Add(2 * time.Second))
 			n, _, err := c.ReadFromUDP(buffer)
 			if err != nil {

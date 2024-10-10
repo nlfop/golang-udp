@@ -68,8 +68,10 @@ func main() {
 		case "STOP_FLOW":
 			cancel()
 			fmt.Println("Exiting UDP server!")
+
 			ctx, cancel = context.WithCancel(context.Background())
 		case "START_FLOW":
+			// _, err = connectionData.WriteToUDP(data, addr)
 			go transmit.TransmitStructure(ctx, cancel, connectionData, sAddrData)
 		case "START_ONCE":
 			go transmit.TransmitStructureOnce(connectionData, sAddrData)

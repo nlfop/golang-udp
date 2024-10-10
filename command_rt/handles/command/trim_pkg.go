@@ -25,18 +25,18 @@ func CommandTrim(commandMass []byte) (string, error) {
 		return "", fmt.Errorf(ErrorChecksum)
 	}
 	switch commandMass[2] {
-	case 16:
+	case 7:
 		switch commandMass[3] {
-		case 16:
-			return StartFlow, nil
 		case 1:
-			return StartOnce, nil
+			return StartFlow, nil
+		case 2:
+			return StopFlow, nil
 		default:
 			return "", fmt.Errorf(ErrorCommand)
 
 		}
-	case 32:
-		return StopFlow, nil
+	// case 32:
+	// 	return StopFlow, nil
 	default:
 		return "", fmt.Errorf(ErrorCommand)
 	}
