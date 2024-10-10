@@ -3,11 +3,13 @@ package transmit
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
 	"time"
+	"udp_connect/command_rt/handles/command"
 	"udp_connect/command_rt/handles/structures"
 )
 
@@ -21,6 +23,8 @@ func TransmitStructure(ctx context.Context, cancel context.CancelFunc, connectio
 	}
 	defer file.Close()
 	numBytes := 8
+	sizePacket := -1
+	var FirstPackage bool
 	for {
 		timer1 := time.NewTimer(100 * time.Millisecond)
 		select {
@@ -28,23 +32,73 @@ func TransmitStructure(ctx context.Context, cancel context.CancelFunc, connectio
 			data := make([]byte, numBytes)
 			n, err := file.Read(data)
 			if err != nil || n == 0 { // если конец файла
-				// fmt.Println(err)
-				// timer1.Stop()
-				// cancel()
 				file.Seek(0, 0)
 				continue
-				// return
 			}
 
 			numBytes = CountPackage(data)
+
 			_, err = connection.WriteToUDP(data, addr)
 			if err != nil {
 				timer1.Stop()
 				fmt.Println(err)
 				return
 			}
-			fmt.Printf("%x\n", data)
+			if sizePacket > 0 {
+				sizePacket -= n
+				if sizePacket == 0 {
+					fmt.Println("packet!")
+					if !FirstPackage {
+						answer := []byte{0x53, 0x00, 0x07, 0x00, 0x00, 0x01, 0x00}
+						answer = CountCheckSum(answer)
+						command.CommandTrim(answer)
+						connection.WriteToUDP(answer, addr)
+						FirstPackage = true
+					}
+				}
+			}
+
+			if data[0] == 83 {
+				sl := []byte{data[2], data[1]}
+				dataSize := binary.BigEndian.Uint16(sl)
+				sizePacket = int(dataSize)
+			}
+			// fmt.Printf("%x\n", data)
 		case <-ctx.Done():
+			for sizePacket > 0 {
+				data := make([]byte, numBytes)
+				n, err := file.Read(data)
+				if err != nil || n == 0 { // если конец файла
+					file.Seek(0, 0)
+					continue
+				}
+
+				numBytes = CountPackage(data)
+
+				_, err = connection.WriteToUDP(data, addr)
+				if err != nil {
+					timer1.Stop()
+					fmt.Println(err)
+					return
+				}
+
+				sizePacket -= n
+				if sizePacket == 0 {
+					fmt.Println("packet!")
+					if !FirstPackage {
+						answer := []byte{0x53, 0x00, 0x07, 0x00, 0x00, 0x01, 0x00}
+						answer = CountCheckSum(answer)
+						command.CommandTrim(answer)
+						connection.WriteToUDP(answer, addr)
+						FirstPackage = true
+					}
+				}
+			}
+			answer := []byte{0x53, 0x00, 0x07, 0x00, 0x00, 0x02, 0x00}
+			answer = CountCheckSum(answer)
+			command.CommandTrim(answer)
+			connection.WriteToUDP(answer, addr)
+
 			timer1.Stop()
 
 			return

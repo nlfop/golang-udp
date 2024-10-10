@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"time"
+	"udp_connect/command_rt/handles/command"
 	"udp_connect/command_rt/handles/structures"
 )
 
@@ -52,6 +53,8 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 	}
 
 	buffer := make([]byte, 4096)
+	sizePacket := -1
+	var FirstPackage bool
 	defer fileTXT.Close()
 	for {
 
@@ -80,6 +83,36 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 
 			EncodingPackage(buffer[:n], fileTXT)
 			fileBIN.Write(buffer[:n])
+			if n == 8 {
+				if buffer[0] == 83 && buffer[5] == 2 {
+					fileTXT.WriteString(fmt.Sprintf(">> Ответ на команду: %x\n", buffer[0:n]))
+					cancel()
+				}
+			}
+
+			if sizePacket > 0 {
+				sizePacket -= n
+				if sizePacket == 0 {
+					fmt.Println("packet!")
+					if !FirstPackage {
+						c.SetDeadline(time.Now().Add(2 * time.Second))
+						n, _, _ := c.ReadFromUDP(buffer)
+						_, err := command.CommandTrim(buffer[0:n])
+						if err != nil {
+							fmt.Println(err)
+						}
+						fileBIN.Write(buffer[:n])
+						fileTXT.WriteString(fmt.Sprintf(">> Ответ на команду: %x\n", buffer[0:n]))
+						FirstPackage = true
+					}
+				}
+			}
+
+			if buffer[0] == 83 {
+				sl := []byte{buffer[2], buffer[1]}
+				dataSize := binary.BigEndian.Uint16(sl)
+				sizePacket = int(dataSize)
+			}
 
 		}
 
