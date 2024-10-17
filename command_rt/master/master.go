@@ -58,6 +58,7 @@ func main() {
 	}
 	for {
 		n, _, _ := connectionComm.ReadFromUDP(buffer)
+		fmt.Printf(">> Команда: %x\n", buffer[0:n])
 
 		comm, err := command.CommandTrim(buffer[0:n])
 		if err != nil {

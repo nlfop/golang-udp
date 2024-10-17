@@ -54,16 +54,17 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 
 	buffer := make([]byte, 4096)
 	sizePacket := -1
-	var FirstPackage bool
+	var FirstPackage int
+
 	defer fileTXT.Close()
 	for {
 
 		select {
 		case <-ctx.Done():
 
-			answers = append(answers, *answer)
+			// answers = append(answers, *answer)
 
-			answers = answers[1:]
+			// answers = answers[1:]
 			// dataAns, _ := json.Marshal(answers)
 			// fileTXT.WriteString(string(dataAns))
 
@@ -80,38 +81,31 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 				fmt.Println(err)
 				continue
 			}
-
-			EncodingPackage(buffer[:n], fileTXT)
-			fileBIN.Write(buffer[:n])
 			if n == 8 {
 				if buffer[0] == 83 && buffer[5] == 2 {
 					fileTXT.WriteString(fmt.Sprintf(">> Ответ на команду: %x\n", buffer[0:n]))
-					cancel()
-				}
-			}
-
-			if sizePacket > 0 {
-				sizePacket -= n
-				if sizePacket == 0 {
-					fmt.Println("packet!")
-					if !FirstPackage {
-						c.SetDeadline(time.Now().Add(2 * time.Second))
-						n, _, _ := c.ReadFromUDP(buffer)
-						_, err := command.CommandTrim(buffer[0:n])
-						if err != nil {
-							fmt.Println(err)
-						}
-						fileBIN.Write(buffer[:n])
-						fileTXT.WriteString(fmt.Sprintf(">> Ответ на команду: %x\n", buffer[0:n]))
-						FirstPackage = true
+					_, err := command.CommandTrim(buffer[0:n])
+					if err != nil {
+						fmt.Println(err)
 					}
+					cancel()
+					continue
 				}
 			}
 
-			if buffer[0] == 83 {
+			fileBIN.Write(buffer[:n])
+
+			if buffer[0] == 83 && !commWait {
 				sl := []byte{buffer[2], buffer[1]}
 				dataSize := binary.BigEndian.Uint16(sl)
 				sizePacket = int(dataSize)
+			}
+			EncodingPackage(buffer[:n], fileTXT)
+			if sizePacket > 0 {
+				sizePacket -= n
+				if sizePacket == 0 {
+					FirstPackage++
+				}
 			}
 
 		}
@@ -162,12 +156,15 @@ var answers []ReciveStructure
 var answer = &ReciveStructure{}
 var block = &ReceiveStructureBlock{}
 
+var commWait bool
+
 func EncodingPackage(d []byte, fileTXT *os.File) {
 	switch {
-	case len(d) != 8:
+	case len(d) != 8 || commWait:
 		block.DataBlock = fmt.Sprintf("%x", d)
 		answer.Data = append(answer.Data, *block)
 		fileTXT.WriteString(fmt.Sprintf("		Данные : %x\n", d))
+		commWait = false
 	case d[0] == 83:
 		if answer.Prefix == 83 {
 			answers = append(answers, *answer)
@@ -175,6 +172,7 @@ func EncodingPackage(d []byte, fileTXT *os.File) {
 
 		sl := []byte{d[2], d[1]}
 		dataSize := binary.BigEndian.Uint16(sl)
+
 		answer = &ReciveStructure{
 			Prefix:      d[0],
 			Size:        int(dataSize),
@@ -196,7 +194,13 @@ func EncodingPackage(d []byte, fileTXT *os.File) {
 			ControlSummSructure: d[6],
 			ControlSumm:         d[7],
 		}
-		fileTXT.WriteString(fmt.Sprintf("	Данные блока: %d, размер структуры %d\n", block.NumberPlace, block.Size))
+		if block.TypeStructure == 2 {
+			fileTXT.WriteString(fmt.Sprintf("	Данные команды, размер структуры %d\n", block.Size))
+			commWait = true
+		} else {
+			fileTXT.WriteString(fmt.Sprintf("	Данные блока: %d, размер структуры %d\n", block.NumberPlace, block.Size))
+		}
+
 		if d[0] == 0 {
 			answer.Data = append(answer.Data, *block)
 

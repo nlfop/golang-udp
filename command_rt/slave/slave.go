@@ -101,6 +101,7 @@ func main() {
 
 		case "START_FLOW":
 			ctx, cancel = context.WithCancel(context.Background())
+
 			go transmit.ReceiveStructure(cData, ctx, cancel)
 			// case "START_ONCE":
 			// 	go transmit.ReceiveStructureOnce(cData)

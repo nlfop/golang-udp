@@ -24,21 +24,35 @@ func TransmitStructure(ctx context.Context, cancel context.CancelFunc, connectio
 	defer file.Close()
 	numBytes := 8
 	sizePacket := -1
-	var FirstPackage bool
+	var FirstPackage int
+	var FixSize bool
 	for {
 		timer1 := time.NewTimer(100 * time.Millisecond)
 		select {
 		case <-timer1.C:
 			data := make([]byte, numBytes)
 			n, err := file.Read(data)
-			if err != nil || n == 0 { // если конец файла
+			if err != nil || n == 0 {
 				file.Seek(0, 0)
 				continue
 			}
 
 			numBytes = CountPackage(data)
 
-			_, err = connection.WriteToUDP(data, addr)
+			dataBuf := make([]byte, len(data))
+			copy(dataBuf, data)
+			if FixSize {
+				sl := []byte{data[2], data[1]}
+				dataSize := binary.BigEndian.Uint16(sl) + 16
+
+				dataBuf[2] = byte(dataSize / 256)
+				dataBuf[1] = byte(dataSize % 256)
+
+			}
+			_, err = connection.WriteToUDP(dataBuf, addr)
+			if FixSize {
+				FixSize = false
+			}
 			if err != nil {
 				timer1.Stop()
 				fmt.Println(err)
@@ -47,13 +61,19 @@ func TransmitStructure(ctx context.Context, cancel context.CancelFunc, connectio
 			if sizePacket > 0 {
 				sizePacket -= n
 				if sizePacket == 0 {
-					fmt.Println("packet!")
-					if !FirstPackage {
-						answer := []byte{0x53, 0x00, 0x07, 0x00, 0x00, 0x01, 0x00}
+					FirstPackage++
+					if FirstPackage == 2 {
+						answer := []byte{0x08, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00}
+						answer = CountCheckSum(answer)
+
+						connection.WriteToUDP(answer, addr)
+						answer = []byte{0x53, 0x00, 0x07, 0x00, 0x00, 0x01, 0x00}
 						answer = CountCheckSum(answer)
 						command.CommandTrim(answer)
 						connection.WriteToUDP(answer, addr)
-						FirstPackage = true
+					}
+					if FirstPackage == 1 {
+						FixSize = true
 					}
 				}
 			}
@@ -63,12 +83,12 @@ func TransmitStructure(ctx context.Context, cancel context.CancelFunc, connectio
 				dataSize := binary.BigEndian.Uint16(sl)
 				sizePacket = int(dataSize)
 			}
-			// fmt.Printf("%x\n", data)
+
 		case <-ctx.Done():
 			for sizePacket > 0 {
 				data := make([]byte, numBytes)
 				n, err := file.Read(data)
-				if err != nil || n == 0 { // если конец файла
+				if err != nil || n == 0 {
 					file.Seek(0, 0)
 					continue
 				}
@@ -84,14 +104,19 @@ func TransmitStructure(ctx context.Context, cancel context.CancelFunc, connectio
 
 				sizePacket -= n
 				if sizePacket == 0 {
-					fmt.Println("packet!")
-					if !FirstPackage {
-						answer := []byte{0x53, 0x00, 0x07, 0x00, 0x00, 0x01, 0x00}
+					FirstPackage++
+					if FirstPackage == 2 {
+						answer := []byte{0x08, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00}
+						answer = CountCheckSum(answer)
+
+						connection.WriteToUDP(answer, addr)
+						answer = []byte{0x53, 0x00, 0x07, 0x00, 0x00, 0x01, 0x00}
 						answer = CountCheckSum(answer)
 						command.CommandTrim(answer)
 						connection.WriteToUDP(answer, addr)
-						FirstPackage = true
+
 					}
+
 				}
 			}
 			answer := []byte{0x53, 0x00, 0x07, 0x00, 0x00, 0x02, 0x00}
