@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<!--
+Client-side part of the Go websocket sample.
+
+Simple HTML page with some JS that records mouse movement events and sends them
+into a websocket. On receiving messages from this websocket, reports them as
+text in a <p> beneath the box.
+
+Eli Bendersky [http://eli.thegreenplace.net]
+This code is in the public domain.
+-->
+<html>
+<head>
+<style>
+  body{
+    background: #252F48;
+  }
+  p{
+    color: #CAD4D6;
+  }
+ .table_dark {
+  font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+  font-size: 14px;
+  width: 640px;
+  text-align: left;
+  border-collapse: collapse;
+  background: #252F48;
+  margin: 10px;
+}
+.table_dark th {
+  color: #EDB749;
+  border-bottom: 1px solid #37B5A5;
+  padding: 12px 17px;
+  /* width: 100px; */
+}
+.table_dark td {
+  color: #CAD4D6;
+  border-bottom: 1px solid #37B5A5;
+  border-right:1px solid #37B5A5;
+  padding: 7px 17px;
+  width: 1000px;
+  
+}
+.table_dark tr:last-child td {
+  border-bottom: none;
+}
+.table_dark td:last-child {
+  border-right: none;
+}
+.table_dark tr:hover td {
+  text-decoration: underline;
+}
+
+.command_input label{
+  color: #CAD4D6;
+}
+.command_input input{
+  background: #252F48;
+  border: 2px solid #EDB749;
+  border-radius: 15px; 
+  color: #CAD4D6;
+  font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+  font-size: 14px;
+}
+
+.command_input button{
+  background: #EDB749;
+  border: 2px solid #EDB749;
+  border-radius: 15px; 
+  color: #000000;
+  font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+  font-size: 14px;
+}
+
+.command_input button:hover{
+  background: #CAD4D6;
+  border: 2px solid #CAD4D6;
+  border-radius: 15px; 
+  color: #000000;
+  font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+  font-size: 14px;
+}
+
+
+</style>
+</head>
+
+<body>
+<p id="timeticker">Waiting for time...</p>
+<div>
+  <form class="command_input">
+    <label for="input-field">
+      Введите команду:
+    </label>
+    <input id="input-field" type="text">
+    <button >Отправить</button>
+  </form>
+ 
+
+  
+</div>
+<table class="table_dark">
+  <tr>
+    <th>Name</th>
+    <th>Value</th>
+
+    </tr>
+  <tr>
+    <td>Num</td>
+    <td id="num_json">0</td>
+
+    </tr>
+  <tr>
+    <td>Message</td>
+    <td id="message_json">hello</td>
+    </tr>
+    <tr>
+  <td>Float</td>
+    <td id="float_json">0.0</td>
+    </tr>
+  <td>Buff</td>
+    <td id="mass_json">[...]</td>
+    </tr>
+
+  </table>
+
+
+<script type="text/javascript">
+
+  var sockTime = null;
+
+  // Websocket server address.
+  var wsServerAddress = "ws://127.0.0.1:8080";
+
+  window.onload = function() {
+    // sockStruct = new WebSocket(wsServerAddress + "/wsstruct");
+
+    // sockStruct.onmessage = function(e) {
+    //   var msg = JSON.parse(e.data);
+    //   var numJSON= msg.num;
+    //   var messageJSON = msg.message;
+    //   document.getElementById("num_json").innerHTML = numJSON;
+    //   document.getElementById("message_json").innerHTML = messageJSON;
+    // }
+
+    sockTime = new WebSocket(wsServerAddress + "/wstime");
+    sockTime.onmessage = function(e) {
+      document.getElementById("timeticker").innerHTML = e.data;
+    }
+
+
+  };
+
+  // Send the msg object, encoded with JSON, on the websocket if it's open.
+  function socketSend(msg) {
+    if (sockEcho != null && sockEcho.readyState == WebSocket.OPEN) {
+      sockEcho.send(JSON.stringify(msg));
+    } else {
+      console.log("Socket isn't OPEN");
+    }
+  }
+  document.querySelector('form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    var commandForm = document.getElementById("input-field").value;
+    console.log(commandForm)
+
+    let xhr = new XMLHttpRequest();
+    // адрес, куда мы отправим нашу JSON-строку
+    let url = "/command";
+    // открываем соединение
+    xhr.open("POST", url, true);
+    // устанавливаем заголовок — выбираем тип контента, который отправится на сервер, в нашем случае мы явно пишем, что это JSON
+    xhr.setRequestHeader("Content-Type", "application/json");
+    // когда придёт ответ на наше обращение к серверу, мы его обработаем здесь
+    xhr.onreadystatechange = function () {
+      // если запрос принят и сервер ответил, что всё в порядке
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        // выводим то, что ответил нам сервер — так мы убедимся, что данные он получил правильно
+        var msg = JSON.parse(this.response);
+        var numJSON= msg.num;
+        var messageJSON = msg.message;
+        var floatJSON = msg.numFloat;
+        var massJSON = msg.bigMass;
+        document.getElementById("num_json").innerHTML = numJSON;
+        document.getElementById("message_json").innerHTML = messageJSON;
+        document.getElementById("float_json").innerHTML = floatJSON;
+        document.getElementById("mass_json").innerHTML = massJSON;
+      }
+    };
+    // преобразуем наши данные JSON в строку
+    var data = JSON.stringify({ "command": commandForm});
+    // когда всё готово, отправляем JSON на сервер
+    xhr.send(data);
+    if (commandForm.indexOf("0101") === 3){
+      sockStruct = new WebSocket(wsServerAddress + "/flowSlave");
+
+      sockStruct.onmessage = function(e) {
+        var msg = JSON.parse(e.data);
+        var numJSON= msg.num;
+        var messageJSON = msg.message;
+        var floatJSON = msg.numFloat;
+        var massJSON = msg.bigMass;
+        document.getElementById("num_json").innerHTML = numJSON;
+        document.getElementById("message_json").innerHTML = messageJSON;
+        document.getElementById("float_json").innerHTML = floatJSON;
+        document.getElementById("mass_json").innerHTML = massJSON;
+}
+    } 
+  });
+
+
+</script>
+
+</body>
+</html>
