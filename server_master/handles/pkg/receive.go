@@ -5,12 +5,15 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"time"
 	"udp_connect/server_master/handles/command"
 	"udp_connect/server_master/handles/structures"
+
+	"github.com/gofiber/contrib/websocket"
 )
 
 type ReciveStructure struct {
@@ -36,7 +39,11 @@ type ReceiveStructureBlock struct {
 	DataBlock           string `json:"data_block"`
 }
 
-func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.CancelFunc) {
+type CommandAnswer struct {
+	Answer []byte `json:"commandAnswer"`
+}
+
+func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.CancelFunc, ws *websocket.Conn) {
 
 	nameFile := fmt.Sprintf("%v_%v.bin", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
 	fileBIN, err := os.Create(nameFile)
@@ -61,12 +68,12 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 
 		select {
 		case <-ctx.Done():
-
-			// answers = append(answers, *answer)
+			answer.Data = append(answer.Data, *block)
+			answers = append(answers, *answer)
 
 			// answers = answers[1:]
-			// dataAns, _ := json.Marshal(answers)
-			// fileTXT.WriteString(string(dataAns))
+			dataAns, _ := json.Marshal(answer)
+			ws.WriteMessage(websocket.TextMessage, dataAns)
 
 			time.Sleep(200 * time.Millisecond)
 
@@ -84,6 +91,12 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 			if n == 8 {
 				if buffer[0] == 83 && buffer[5] == 2 {
 					fileTXT.WriteString(fmt.Sprintf(">> Ответ на команду: %x\n", buffer[0:n]))
+					jsonBuf := CommandAnswer{
+						Answer: buffer[0:n],
+					}
+					data, _ := json.Marshal(jsonBuf)
+
+					ws.WriteMessage(websocket.TextMessage, data)
 					_, err := command.CommandTrim(buffer[0:n])
 					if err != nil {
 						fmt.Println(err)
@@ -100,7 +113,7 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 				dataSize := binary.BigEndian.Uint16(sl)
 				sizePacket = int(dataSize)
 			}
-			EncodingPackage(buffer[:n], fileTXT)
+			EncodingPackage(buffer[:n], fileTXT, ws)
 			if sizePacket > 0 {
 				sizePacket -= n
 				if sizePacket == 0 {
@@ -158,7 +171,7 @@ var block = &ReceiveStructureBlock{}
 
 var commWait bool
 
-func EncodingPackage(d []byte, fileTXT *os.File) {
+func EncodingPackage(d []byte, fileTXT *os.File, ws *websocket.Conn) {
 	switch {
 	case len(d) != 8 || commWait:
 		block.DataBlock = fmt.Sprintf("%x", d)
@@ -168,6 +181,9 @@ func EncodingPackage(d []byte, fileTXT *os.File) {
 	case d[0] == 83:
 		if answer.Prefix == 83 {
 			answers = append(answers, *answer)
+			data, _ := json.Marshal(answer)
+
+			ws.WriteMessage(websocket.TextMessage, data)
 		}
 
 		sl := []byte{d[2], d[1]}

@@ -5,17 +5,14 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
-	"os"
 	"time"
-	"udp_connect/server_master/handles/structures"
+	transmit "udp_connect/server_master/handles/pkg"
 	"udp_connect/server_master/slave"
-	"unsafe"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -66,73 +63,99 @@ func websocketTimeConnection(ws *websocket.Conn) {
 }
 
 func websocketFlowSlave(ws *websocket.Conn) {
-	CONNECT := "127.0.0.1:1234"
-	s, err := net.ResolveUDPAddr("udp4", CONNECT)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(context.Background())
+	CONNECTData := "127.0.0.1:1234"
+
+	addrData := "127.0.0.1:8000"
+
+	sData, err := net.ResolveUDPAddr("udp4", CONNECTData)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	c, err := net.DialUDP("udp4", nil, s)
 
+	sAddrData, err := net.ResolveUDPAddr("udp4", addrData)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Printf("The UDP server is %s\n", c.RemoteAddr().String())
-	// fmt.Println("Enter 7 bytes without spaces and checksum (it counts automatically)")
-	defer c.Close()
-
-	_, err = c.Write([]byte{104, 0, 16, 16, 0, 0, 0, 136})
-	nameFile := fmt.Sprintf("%v_%v.bin", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
-	fileBIN, err := os.Create(nameFile)
+	cData, err := net.DialUDP("udp4", sAddrData, sData)
 	if err != nil {
-		fmt.Println("Unable to create file:", err)
-		os.Exit(1)
+		fmt.Println(err)
+		return
 	}
-	defer fileBIN.Close()
-	nameFileTXT := fmt.Sprintf("%v_%v.txt", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
-	fileTXT, err := os.Create(nameFileTXT)
-	if err != nil {
-		fmt.Println("Unable to create file:", err)
-		os.Exit(1)
-	}
+	defer cData.Close()
+	transmit.ReceiveStructure(cData, ctx, cancel, ws)
+	// CONNECT := "127.0.0.1:1234"
+	// s, err := net.ResolveUDPAddr("udp4", CONNECT)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+	// c, err := net.DialUDP("udp4", nil, s)
 
-	defer fileTXT.Close()
-	for {
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
 
-		// select {
-		// case <-ctx.Done():
-		// 	fmt.Println("here")
+	// fmt.Printf("The UDP server is %s\n", c.RemoteAddr().String())
+	// // fmt.Println("Enter 7 bytes without spaces and checksum (it counts automatically)")
+	// defer c.Close()
 
-		// 	time.Sleep(200 * time.Millisecond)
-		// 	return
-		// default:
-		buffer := make([]byte, 4096)
+	// _, err = c.Write([]byte{104, 0, 16, 16, 0, 0, 0, 136})
+	// nameFile := fmt.Sprintf("%v_%v.bin", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
+	// fileBIN, err := os.Create(nameFile)
+	// if err != nil {
+	// 	fmt.Println("Unable to create file:", err)
+	// 	os.Exit(1)
+	// }
+	// defer fileBIN.Close()
+	// nameFileTXT := fmt.Sprintf("%v_%v.txt", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
+	// fileTXT, err := os.Create(nameFileTXT)
+	// if err != nil {
+	// 	fmt.Println("Unable to create file:", err)
+	// 	os.Exit(1)
+	// }
 
-		c.SetDeadline(time.Now().Add(2 * time.Second))
-		n, _, err := c.ReadFromUDP(buffer)
-		if n == 0 {
-			fmt.Println("end of flow receive")
-			return
-		}
-		if err != nil {
-			continue
-		}
-		dec := gob.NewDecoder(bytes.NewReader(buffer[:n]))
-		p := structures.Packet{}
+	// defer fileTXT.Close()
+	// for {
 
-		dec.Decode(&p)
+	// 	// select {
+	// 	// case <-ctx.Done():
+	// 	// 	fmt.Println("here")
 
-		fileBIN.Write(buffer)
-		fileTXT.WriteString(fmt.Sprintf("%d %v\n", p.PortTo, unsafe.Sizeof(p.PortTo)+unsafe.Sizeof(p.Message)+unsafe.Sizeof(p.NumFloat)+4*uintptr(len(p.BigMass))))
+	// 	// 	time.Sleep(200 * time.Millisecond)
+	// 	// 	return
+	// 	// default:
+	// 	buffer := make([]byte, 4096)
 
-		data, _ := json.Marshal(p)
+	// 	c.SetDeadline(time.Now().Add(2 * time.Second))
+	// 	n, _, err := c.ReadFromUDP(buffer)
+	// 	if n == 0 {
+	// 		fmt.Println("end of flow receive")
+	// 		return
+	// 	}
+	// 	if err != nil {
+	// 		continue
+	// 	}
+	// 	dec := gob.NewDecoder(bytes.NewReader(buffer[:n]))
+	// 	p := structures.Packet{}
 
-		ws.WriteMessage(websocket.TextMessage, data)
-		// }
+	// 	dec.Decode(&p)
 
-	}
+	// 	fileBIN.Write(buffer)
+	// 	fileTXT.WriteString(fmt.Sprintf("%d %v\n", p.PortTo, unsafe.Sizeof(p.PortTo)+unsafe.Sizeof(p.Message)+unsafe.Sizeof(p.NumFloat)+4*uintptr(len(p.BigMass))))
+
+	// 	data, _ := json.Marshal(p)
+
+	// ws.WriteMessage(websocket.TextMessage, data)
+	// 	// }
+
+	// }
 }
 
 func main() {
@@ -141,7 +164,9 @@ func main() {
 	app.Get("/wstime", websocket.New(websocketTimeConnection))
 	app.Get("/wsstruct", websocket.New(websocketStructureSend))
 	app.Get("/flowSlave", websocket.New(websocketFlowSlave))
-	app.Static("/", "server/static/html/index.html")
+	// app.Static("/", "udp_connect/server_master/static/html/index.html")
+
+	app.Static("/", "././static/html/index.html")
 	app.Post("/command", slave.ReceiveCommandFront)
 	addr := flag.String("addr", ":8080", "http service address")
 	flag.Parse()

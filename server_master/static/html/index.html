@@ -192,7 +192,7 @@ This code is in the public domain.
     var data = JSON.stringify({ "command": commandForm});
     // когда всё готово, отправляем JSON на сервер
     xhr.send(data);
-    if (commandForm.indexOf("0101") === 3){
+    if (commandForm.indexOf("0701") === 4){
       sockStruct = new WebSocket(wsServerAddress + "/flowSlave");
 
       sockStruct.onmessage = function(e) {
