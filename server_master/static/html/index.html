@@ -100,30 +100,55 @@ This code is in the public domain.
 
   
 </div>
-<table class="table_dark">
+
+<table class="table_dark" >
+  <thead>
   <tr>
-    <th>Name</th>
-    <th>Value</th>
+    <th>Номер пакета</th>
+    <th>Размер пакета</th>
+
+    </tr></thead>
+    <tbody id="table_packet">
+      <tr>
+        <td id="num_pack"> </td>
+        <td id="size_pack"> </td>
+      </tr>
+    </tbody>
+
+</table>
+
+
+<table class="table_dark" >
+  <thead>
+  <tr>
+    <th>Номер блока</th>
+    <th>Данные блока</th>
+
+    </tr></thead>
+    <tbody id="table_block"></tbody>
+
+</table>
+<table class="table_dark" >
+
+  <tr>
+    <th>Ответ на команду:</th>
+    <th id="answer_comm"></th>
 
     </tr>
-  <tr>
-    <td>Num</td>
-    <td id="num_json">0</td>
 
-    </tr>
-  <tr>
-    <td>Message</td>
-    <td id="message_json">hello</td>
-    </tr>
-    <tr>
-  <td>Float</td>
-    <td id="float_json">0.0</td>
-    </tr>
-  <td>Buff</td>
-    <td id="mass_json">[...]</td>
-    </tr>
 
-  </table>
+</table>
+
+<!-- <table class="table_dark" >
+  <thead>
+  <tr>
+    <th>Номер блока</th>
+    <th>Данные блока</th>
+
+    </tr></thead>
+    <tbody id="table_command_block"></tbody>
+
+</table> -->
 
 
 <script type="text/javascript">
@@ -134,15 +159,6 @@ This code is in the public domain.
   var wsServerAddress = "ws://127.0.0.1:8080";
 
   window.onload = function() {
-    // sockStruct = new WebSocket(wsServerAddress + "/wsstruct");
-
-    // sockStruct.onmessage = function(e) {
-    //   var msg = JSON.parse(e.data);
-    //   var numJSON= msg.num;
-    //   var messageJSON = msg.message;
-    //   document.getElementById("num_json").innerHTML = numJSON;
-    //   document.getElementById("message_json").innerHTML = messageJSON;
-    // }
 
     sockTime = new WebSocket(wsServerAddress + "/wstime");
     sockTime.onmessage = function(e) {
@@ -152,7 +168,7 @@ This code is in the public domain.
 
   };
 
-  // Send the msg object, encoded with JSON, on the websocket if it's open.
+
   function socketSend(msg) {
     if (sockEcho != null && sockEcho.readyState == WebSocket.OPEN) {
       sockEcho.send(JSON.stringify(msg));
@@ -166,48 +182,77 @@ This code is in the public domain.
     console.log(commandForm)
 
     let xhr = new XMLHttpRequest();
-    // адрес, куда мы отправим нашу JSON-строку
+
     let url = "/command";
-    // открываем соединение
+
     xhr.open("POST", url, true);
-    // устанавливаем заголовок — выбираем тип контента, который отправится на сервер, в нашем случае мы явно пишем, что это JSON
+
     xhr.setRequestHeader("Content-Type", "application/json");
-    // когда придёт ответ на наше обращение к серверу, мы его обработаем здесь
+
     xhr.onreadystatechange = function () {
-      // если запрос принят и сервер ответил, что всё в порядке
+
       if (xhr.readyState === 4 && xhr.status === 200) {
-        // выводим то, что ответил нам сервер — так мы убедимся, что данные он получил правильно
-        var msg = JSON.parse(this.response);
-        var numJSON= msg.num;
-        var messageJSON = msg.message;
-        var floatJSON = msg.numFloat;
-        var massJSON = msg.bigMass;
-        document.getElementById("num_json").innerHTML = numJSON;
-        document.getElementById("message_json").innerHTML = messageJSON;
-        document.getElementById("float_json").innerHTML = floatJSON;
-        document.getElementById("mass_json").innerHTML = massJSON;
+ 
       }
     };
-    // преобразуем наши данные JSON в строку
+
     var data = JSON.stringify({ "command": commandForm});
-    // когда всё готово, отправляем JSON на сервер
+  
     xhr.send(data);
     if (commandForm.indexOf("0701") === 4){
       sockStruct = new WebSocket(wsServerAddress + "/flowSlave");
-
+      num=1;
       sockStruct.onmessage = function(e) {
-        var msg = JSON.parse(e.data);
-        var numJSON= msg.num;
-        var messageJSON = msg.message;
-        var floatJSON = msg.numFloat;
-        var massJSON = msg.bigMass;
-        document.getElementById("num_json").innerHTML = numJSON;
-        document.getElementById("message_json").innerHTML = messageJSON;
-        document.getElementById("float_json").innerHTML = floatJSON;
-        document.getElementById("mass_json").innerHTML = massJSON;
+
+        var data_JSON_accum = JSON.parse(e.data); 
+        if ('commandAnswer' in data_JSON_accum){
+          let answer = (document).getElementById('answer_comm');
+          answer.innerHTML= data_JSON_accum.commandAnswer;  
+        }
+        else{
+          createTableBody(data_JSON_accum);
+          tableFill(data_JSON_accum);
+        }
+        
+
 }
     } 
   });
+
+  function createTableBody(data_JSON_accum) {
+    let rows = 18;
+    let cells = 2;
+    let table = (document).getElementById('table_block');  
+    table.innerHTML = ("<tr>" + "<td></td>".repeat(cells) + "</tr>").repeat(rows);
+};
+let num;
+
+function tableFill(data_JSON_accum) {
+    let rows = 18;
+    let cells = 2;
+
+  let td = document.querySelectorAll('#table_block td');
+  let tr = document.querySelectorAll('#table_block tr');
+  if (data_JSON_accum.data.length ===19){
+  let answer = (document).getElementById('answer_comm');
+  answer.innerHTML= data_JSON_accum.data[18].data_block;  
+  }
+  let numpack = (document).getElementById('num_pack');
+  let sizepack = (document).getElementById('size_pack');
+  numpack.innerHTML= num++;  
+  sizepack.innerHTML= data_JSON_accum.size;  
+
+  for( let i = 0; i < rows; i++ ) {
+
+    td[cells*i].textContent= data_JSON_accum.data[i].num_block
+    td[cells*i+1].textContent= data_JSON_accum.data[i].data_block
+    
+  }
+
+  
+
+}
+
 
 
 </script>

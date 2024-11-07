@@ -40,11 +40,12 @@ type ReceiveStructureBlock struct {
 }
 
 type CommandAnswer struct {
-	Answer []byte `json:"commandAnswer"`
+	Answer string `json:"commandAnswer"`
 }
 
 func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.CancelFunc, ws *websocket.Conn) {
-
+	answer = &ReciveStructure{}
+	block = &ReceiveStructureBlock{}
 	nameFile := fmt.Sprintf("%v_%v.bin", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
 	fileBIN, err := os.Create(nameFile)
 	if err != nil {
@@ -68,12 +69,12 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 
 		select {
 		case <-ctx.Done():
-			answer.Data = append(answer.Data, *block)
-			answers = append(answers, *answer)
+			// answer.Data = append(answer.Data, *block)
+			// answers = append(answers, *answer)
 
-			// answers = answers[1:]
-			dataAns, _ := json.Marshal(answer)
-			ws.WriteMessage(websocket.TextMessage, dataAns)
+			// // answers = answers[1:]
+			// dataAns, _ := json.Marshal(answer)
+			// ws.WriteMessage(websocket.TextMessage, dataAns)
 
 			time.Sleep(200 * time.Millisecond)
 
@@ -91,8 +92,14 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 			if n == 8 {
 				if buffer[0] == 83 && buffer[5] == 2 {
 					fileTXT.WriteString(fmt.Sprintf(">> Ответ на команду: %x\n", buffer[0:n]))
+
+					answers = append(answers, *answer)
+
+					// answers = answers[1:]DataBlock = fmt.Sprintf("%x", d)
+					dataAns, _ := json.Marshal(answer)
+					ws.WriteMessage(websocket.TextMessage, dataAns)
 					jsonBuf := CommandAnswer{
-						Answer: buffer[0:n],
+						Answer: fmt.Sprintf("%x", buffer[0:n]),
 					}
 					data, _ := json.Marshal(jsonBuf)
 
