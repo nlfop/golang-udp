@@ -1,16 +1,13 @@
 package transmit
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
 	"time"
 	"udp_connect/server_master/handles/command"
-	"udp_connect/server_master/handles/structures"
 )
 
 func TransmitStructure(ctx context.Context, cancel context.CancelFunc, connection *net.UDPConn, addr *net.UDPAddr) {
@@ -130,31 +127,6 @@ func TransmitStructure(ctx context.Context, cancel context.CancelFunc, connectio
 		}
 
 	}
-}
-
-func TransmitStructureOnce(connection *net.UDPConn, addr *net.UDPAddr) {
-	counter := 1
-
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	packet := &structures.Packet{
-		PortTo:   counter,
-		Message:  "here",
-		NumFloat: 4.4,
-		BigMass:  make([]int32, 256)}
-	counter += 1
-
-	err := encoder.Encode(packet)
-	if err != nil {
-		fmt.Println("--error")
-		return
-	}
-	_, err = connection.WriteToUDP(buf.Bytes(), addr)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
 }
 
 func CountPackage(d []byte) int {

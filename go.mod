@@ -1,6 +1,6 @@
 module udp_connect
 
-go 1.22.2
+go 1.22
 
 require (
 	github.com/gofiber/contrib/websocket v1.3.2

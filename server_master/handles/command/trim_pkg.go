@@ -5,7 +5,6 @@ import "fmt"
 const (
 	StartFlow     = "START_FLOW"
 	StopFlow      = "STOP_FLOW"
-	StartOnce     = "START_ONCE"
 	ErrorChecksum = "error with checksum"
 	ErrorPacket   = "error with packet"
 	ErrorCommand  = "error with unknown command"
@@ -37,8 +36,6 @@ func CommandTrim(commandMass []byte) (string, error) {
 				return "", fmt.Errorf(ErrorCommand)
 
 			}
-		// case 32:
-		// 	return StopFlow, nil
 		default:
 			return "", fmt.Errorf(ErrorCommand)
 		}

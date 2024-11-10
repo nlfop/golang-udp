@@ -2,9 +2,6 @@ package slave
 
 //go run slave/slave.go 127.0.0.1:1234 127.0.0.1:1235 127.0.0.1:8000 127.0.0.1:8001
 
-// 68 00 10 10 00 00 00 - старт периодической передачи
-// 68 00 20 01 00 00 00 - стоп периодической передачи
-
 // 68000701000000 кс старт
 // 68000702000000 кс стоп
 
@@ -24,11 +21,6 @@ type reqString struct {
 }
 
 func ReceiveCommandFront(connectionhttp *fiber.Ctx) error {
-	// arguments := os.Args
-	// if len(arguments) == 1 {
-	// 	fmt.Println("Please provide a host:port string")
-	// 	return
-	// }
 
 	CONNECTComm := "127.0.0.1:1235"
 
@@ -56,20 +48,16 @@ func ReceiveCommandFront(connectionhttp *fiber.Ctx) error {
 	fmt.Println("Enter 7 bytes without spaces and checksum (it counts automatically)")
 
 	defer cComm.Close()
-	// var ctx context.Context
-	// var cancel context.CancelFunc
 
-	req := new(reqString) // Store the body in the user and return error if encountered
+	req := new(reqString)
 	err = connectionhttp.BodyParser(req)
 	fmt.Println(req.CommandJSON)
 	data := req.CommandJSON
 	if err != nil {
-		// cancel()
+
 		connectionhttp.Status(500).JSON(fiber.Map{"status": "error", "message": "Something's wrong with your input", "data": err})
 		return fmt.Errorf("something's wrong with your input")
 	}
-	// Return the created user
-	// n := len(data)
 
 	str, _ := hex.DecodeString(data)
 	str = transmit.CountCheckSum(str)
@@ -93,12 +81,6 @@ func ReceiveCommandFront(connectionhttp *fiber.Ctx) error {
 		fmt.Println("Exiting UDP client flow data!")
 		connectionhttp.Status(200).JSON(fiber.Map{"status": "Exiting UDP client!"})
 
-		// case "START_FLOW":
-		// 	ctx, cancel = context.WithCancel(context.Background())
-
-		// 	go transmit.ReceiveStructure(cData, ctx, cancel)
-		// case "START_ONCE":
-		// 	go transmit.ReceiveStructureOnce(cData)
 	}
 	return nil
 }

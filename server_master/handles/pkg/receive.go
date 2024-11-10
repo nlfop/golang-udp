@@ -1,17 +1,14 @@
 package transmit
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"time"
 	"udp_connect/server_master/handles/command"
-	"udp_connect/server_master/handles/structures"
 
 	"github.com/gofiber/contrib/websocket"
 )
@@ -69,19 +66,12 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 
 		select {
 		case <-ctx.Done():
-			// answer.Data = append(answer.Data, *block)
-			// answers = append(answers, *answer)
-
-			// // answers = answers[1:]
-			// dataAns, _ := json.Marshal(answer)
-			// ws.WriteMessage(websocket.TextMessage, dataAns)
 
 			time.Sleep(200 * time.Millisecond)
 
 			return
 		default:
 
-			// c.SetDeadline(time.Now().Add(2 * time.Second))
 			c.SetDeadline(time.Now().Add(2 * time.Second))
 			n, _, err := c.ReadFromUDP(buffer)
 			if err != nil {
@@ -95,7 +85,6 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 
 					answers = append(answers, *answer)
 
-					// answers = answers[1:]DataBlock = fmt.Sprintf("%x", d)
 					dataAns, _ := json.Marshal(answer)
 					ws.WriteMessage(websocket.TextMessage, dataAns)
 					jsonBuf := CommandAnswer{
@@ -131,35 +120,6 @@ func ReceiveStructure(c *net.UDPConn, ctx context.Context, cancel context.Cancel
 		}
 
 	}
-}
-
-func ReceiveStructureOnce(c *net.UDPConn) {
-	nameFile := fmt.Sprintf("%v_%v.bin", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
-	fileBIN, err := os.Create(nameFile)
-	if err != nil {
-		fmt.Println("Unable to create file:", err)
-		os.Exit(1)
-	}
-	defer fileBIN.Close()
-	nameFileTXT := fmt.Sprintf("%v_%v.txt", time.Now().Format("2006_01_02"), time.Now().Format("15_04"))
-	fileTXT, err := os.Create(nameFileTXT)
-	if err != nil {
-		fmt.Println("Unable to create file:", err)
-		os.Exit(1)
-	}
-
-	defer fileTXT.Close()
-	buffer := make([]byte, 4096)
-
-	n, _, _ := c.ReadFromUDP(buffer)
-
-	dec := gob.NewDecoder(bytes.NewReader(buffer[:n]))
-	p := structures.Packet{}
-
-	dec.Decode(&p)
-	fmt.Println(p)
-	fileBIN.Write(buffer)
-
 }
 
 func CountCheckSum(b []byte) []byte {
@@ -232,16 +192,3 @@ func EncodingPackage(d []byte, fileTXT *os.File, ws *websocket.Conn) {
 	}
 
 }
-
-// func lastPacket(fileTXT *os.File) {
-// 	if answer.Prefix != 83 {
-// 		return
-// 	}
-// 	fileTXT.WriteString(fmt.Sprintf("Новый пакет, размер %d\n", answer.Size))
-// 	for _, val := range answer.Data {
-// 		fileTXT.WriteString(fmt.Sprintf("	Данные блока: %d, размер структуры %d\n", block.NumberPlace, block.Size))
-// 		if val.DataBlock != "" {
-// 			fileTXT.WriteString(fmt.Sprintf("		Данные : %x\n", val.DataBlock))
-// 		}
-// 	}
-// }
